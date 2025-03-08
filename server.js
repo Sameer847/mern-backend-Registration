@@ -11,36 +11,30 @@ const helmet = require('helmet');
 
 const app = express();
 
-// ✅ CORS Configuration (Frontend URL Update करो)
+// CORS Configuration
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: 'http://localhost:5173',  // Update with your frontend URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 };
 app.use(cors(corsOptions));
 
-// ✅ Middleware Setup
+// Middleware
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 app.use(helmet());
 
-// ✅ MongoDB Connection with Error Handling
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
-.then(() => console.log("✅ MongoDB Connected Successfully"))
-.catch(err => {
-    console.error("❌ MongoDB Connection Error:", err.message);
-    process.exit(1);  // 🚨 Exit process if DB connection fails
-});
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// ✅ User Model
+// User model
 const User = require('./models/User');
 
-// ✅ Validation Schemas using Joi
+// Validation schemas
 const registerSchema = Joi.object({
-    name: Joi.string().trim().min(3).required(),
+    name: Joi.string().required(),
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required(),
 });
@@ -50,60 +44,56 @@ const loginSchema = Joi.object({
     password: Joi.string().min(6).required(),
 });
 
-// ✅ Register Route
+// Register Endpoint
 app.post('/register', async (req, res) => {
     const { error } = registerSchema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
     try {
         const { name, email, password } = req.body;
-        const existingUser = await User.findOne({ email });
-
-        if (existingUser) return res.status(400).json({ message: "User already exists" });
-
         const hashedPassword = await bcrypt.hash(password, 12);
         const user = new User({ name, email, password: hashedPassword });
         await user.save();
-
         res.status(201).json({ message: "User registered successfully" });
     } catch (err) {
-        console.error("❌ Registration Error:", err);
+        console.error("Registration error:", err);
         res.status(500).json({ message: "Error registering user" });
     }
 });
 
-// ✅ Login Route
+// Login Endpoint
 app.post('/login', async (req, res) => {
     const { error } = loginSchema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
     try {
-        const { email, password, rememberMe } = req.body;
+        const { email, password } = req.body;
         const user = await User.findOne({ email });
-
         if (!user) return res.status(400).json({ message: "User not found" });
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ message: "Invalid password" });
 
-        const expiresIn = rememberMe ? '7d' : '1h';  
-        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn });
+        // Remember Me Feature
+        const rememberMe = req.body.rememberMe || false;
+        const expiresIn = rememberMe ? '7d' : '1h'; 
 
+        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn });
         res.status(200).json({ token, name: user.name });
     } catch (err) {
-        console.error("❌ Login Error:", err);
+        console.error("Login error:", err);
         res.status(500).json({ message: "Error logging in" });
     }
 });
 
-// ✅ Global Error Handling Middleware
+// Error Handling Middleware
 app.use((err, req, res, next) => {
-    console.error("❌ Server Error:", err.stack);
+    console.error("Server error:", err.stack);
     res.status(500).json({ message: "Internal server error" });
 });
 
-// ✅ Start Server
+// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-});
+}); 
