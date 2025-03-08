@@ -13,10 +13,7 @@ const app = express();
 
 // CORS Configuration
 const corsOptions = {
-     origin: [
-        'http://localhost:5173',  // Local frontend
-        'https://mern-frontend-registration.vercel.app'  // Deployed frontend
-    ],
+    origin: 'https://mern-frontend-registration.vercel.app',  // ✅ Your frontend URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 };
