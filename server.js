@@ -12,8 +12,29 @@ const helmet = require('helmet');
 const app = express();
 
 // CORS Configuration
+// const corsOptions = {
+//     origin: 'https://mern-frontend-registration.vercel.app',  // ✅ Your frontend URL
+//     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//     credentials: true,
+// };
+
+// CORS Configuration
+const allowedOrigins = [
+    'https://mern-frontend-registration.vercel.app', // Your frontend
+    'http://localhost:3000', // Local frontend (for testing)
+    'http://localhost', // Android Emulator
+    'capacitor://localhost', // Capacitor Android
+    'http://192.168.1.100:3000' // Replace with your local network IP if testing on a real device
+];
+
 const corsOptions = {
-    origin: 'https://mern-frontend-registration.vercel.app',  // ✅ Your frontend URL
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 };
