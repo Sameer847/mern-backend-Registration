@@ -11,49 +11,59 @@ const helmet = require('helmet');
 
 const app = express();
 
-// CORS Configuration
-// const corsOptions = {
-//     origin: 'https://mern-frontend-registration.vercel.app',  // ✅ Your frontend URL
-//     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-//     credentials: true,
-// };
-
-// CORS Configuration
+// ✅ ALLOWED ORIGINS (For Web & Mobile)
 const allowedOrigins = [
-    'https://mern-frontend-registration.vercel.app', // Your frontend
+    'https://mern-frontend-registration.vercel.app', // Vercel frontend
     'http://localhost:3000', // Local frontend (for testing)
     'http://localhost', // Android Emulator
-    'capacitor://localhost', // Capacitor Android
-    'http://192.168.1.100:3000' // Replace with your local network IP if testing on a real device
+    'capacitor://localhost', // Capacitor Android App
+    'http://192.168.1.100:5000', // Mobile devices in local network (Replace with your actual IP)
+    'http://192.168.1.101:5000'  // Another possible local IP (for testing)
 ];
 
+// ✅ CORS CONFIGURATION
 const corsOptions = {
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            console.log("❌ CORS BLOCKED:", origin); // Debugging
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 
-// Middleware
+// ✅ CORS FIX: Allow OPTIONS Preflight Requests
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+    
+    next();
+});
+
+// ✅ Middlewares
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 app.use(helmet());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
+// ✅ MongoDB Connection
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("✅ Connected to MongoDB"))
     .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// User model
+// ✅ User Model
 const User = require('./models/User');
 
-// Validation schemas
+// ✅ Validation Schemas
 const registerSchema = Joi.object({
     name: Joi.string().required(),
     email: Joi.string().email().required(),
@@ -65,7 +75,7 @@ const loginSchema = Joi.object({
     password: Joi.string().min(6).required(),
 });
 
-// Register Endpoint
+// ✅ REGISTER Endpoint
 app.post('/register', async (req, res) => {
     const { error } = registerSchema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -82,7 +92,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Login Endpoint
+// ✅ LOGIN Endpoint
 app.post('/login', async (req, res) => {
     const { error } = loginSchema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -95,7 +105,7 @@ app.post('/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) return res.status(400).json({ message: "Invalid password" });
 
-        // Remember Me Feature
+        // ✅ Remember Me Feature
         const rememberMe = req.body.rememberMe || false;
         const expiresIn = rememberMe ? '7d' : '1h'; 
 
@@ -107,14 +117,14 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Error Handling Middleware
+// ✅ ERROR HANDLING MIDDLEWARE
 app.use((err, req, res, next) => {
     console.error("Server error:", err.stack);
     res.status(500).json({ message: "Internal server error" });
 });
 
-// Start Server
+// ✅ START SERVER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-}); 
+});
